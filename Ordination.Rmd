@@ -1,0 +1,65 @@
+---
+title: "Ordination"
+author: "Heather Blagg"
+date: "2026-10-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(vegan)
+library(readr)
+genus_table <- read_csv("Datasets/genus_table.csv")
+groups <- read_csv("Datasets/groups.csv")
+
+#NMDS
+ordination <- metaMDS(genus_table, distance = "bray")
+ef <- envfit(ordination, genus_table, nperm = 999)
+
+ef
+
+ef.adj <- ef
+pvals.adj <- p.adjust(ef$vectors$pvals, method = "fdr")
+ef.adj$vectors$pvals <- pvals.adj
+ef.adj
+p.adjust.methods
+
+site <- as.data.frame(scores(ordination, display = "sites"))
+site <- cbind(site, Treatment = groups$Treatment)
+
+spp<- as.data.frame(scores(ef, display = "vectors"))
+spp<- cbind(spp, Species = rownames(spp))
+spp<- cbind(spp, pval = ef$vectors$pvals)
+sig.spp<- subset(spp, pval<= 0.05)
+
+theme_set(theme_bw())
+nmds<- ggplot(site, aes(x=NMDS1, y=NMDS2)) +
+  geom_point(aes(NMDS1, NMDS2, color=factor(site$Treatment),
+                 shape = factor(site$Treatment)), size = 6) +
+  labs(colour= "Treatment", shape = "Treatment")
+
+nmds
+
+B2<- nmds +
+  geom_segment(data=sig.spp, aes(x=0, xend=NMDS1, y=0, yend=NMDS2),
+               arrow = arrow(length = unit(0.25, "cm"))) +
+  ggrepel::geom_text_repel(data= sig.spp, aes(x=NMDS1, y=NMDS2, 
+               label= Species))
+
+B2
+
+```
+
+
+
+
+
+
+
+
+
